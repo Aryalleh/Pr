@@ -9,7 +9,6 @@ jobs:
   build-and-release:
     runs-on: windows-latest
     
-    # این دسترسی برای اینه که اکشن بتونه تو گیت‌هابت ریلیز بسازه
     permissions:
       contents: write
 
@@ -30,14 +29,14 @@ jobs:
         
     - name: Build EXE with PyInstaller
       run: |
-        pyinstaller --onefile --clean deploy.py
+        # در این خط نام فایل خروجی و ورژن‌گذاری داینامیک تنظیم شده است
+        pyinstaller --onefile --name="Zeus_Deployer_v1.0.${{ github.run_number }}" --icon=icon.ico --clean deploy.py
         
     - name: Create Release and Upload EXE
       uses: softprops/action-gh-release@v2
       with:
-        # ساخت یک تگ و اسم داینامیک بر اساس شماره اجرای اکشن
         tag_name: v1.0.${{ github.run_number }}
         name: Zeus Panel Deployer v1.0.${{ github.run_number }}
-        files: dist/deploy.exe
+        files: dist/Zeus_Deployer_v1.0.${{ github.run_number }}.exe
         draft: false
         prerelease: false
