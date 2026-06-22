@@ -1,5 +1,7 @@
 
-<img width="1280" height="712" alt="photo_2026-06-22_07-27-39" src="https://github.com/user-attachments/assets/12f3aa7f-d9e5-42aa-afd3-77c2ff2b9c96" />
+<img width="1850" height="990" alt="1" src="https://github.com/user-attachments/assets/c542add1-069c-4f9b-9c20-694b99baf24c" />
+<img width="1850" height="990" alt="2" src="https://github.com/user-attachments/assets/db70c33f-430c-428c-90eb-28c2e2e1ca02" />
+
 
 
 ## 🚀 پنل Zeus کلود فلر
