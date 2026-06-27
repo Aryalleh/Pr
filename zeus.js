@@ -2285,10 +2285,10 @@ const HTML_TEMPLATES = {
                         <label class="block text-xs font-bold text-gray-500 dark:text-zinc-400 mb-2 uppercase tracking-wider">شبیه‌ساز اثر انگشت مرورگر (Fingerprint)</label>
                         <div class="relative">
                             <select id="fingerprint-select" class="w-full px-3 py-2.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-xs font-semibold text-gray-700 dark:text-zinc-300 cursor-pointer appearance-none">
-                                <option value="chrome" selected>🌐 Chrome (پیش‌فرض)</option>
+                                <option value="chrome">🌐 Chrome</option>
                                 <option value="firefox">🦊 Firefox</option>
                                 <option value="safari">🧭 Safari</option>
-                                <option value="ios">📱 iOS Device</option>
+                                <option value="ios" selected>📱 iOS Device (پیش‌فرض)</option>
                                 <option value="android">🤖 Android Device</option>
                                 <option value="edge">🌀 Microsoft Edge</option>
                                 <option value="360">🔒 360 Browser</option>
@@ -2400,8 +2400,9 @@ const HTML_TEMPLATES = {
             }).join('');
 
             nonTlsContainer.innerHTML = nonTlsPorts.map(function(port) {
+                const isCheckedDefault = port === '80' ? 'checked' : '';
                 return '<label class="relative cursor-pointer">' +
-                    '<input type="checkbox" name="ports" value="' + port + '" class="peer sr-only">' +
+                    '<input type="checkbox" name="ports" value="' + port + '" ' + isCheckedDefault + ' class="peer sr-only">' +
                     '<div class="flex items-center justify-center gap-2 px-3 py-2 border border-gray-200 dark:border-zinc-800/80 rounded-xl text-xs font-semibold select-none transition-all duration-200 hover:bg-gray-50 dark:hover:bg-zinc-800/40 text-gray-700 dark:text-zinc-300 peer-checked:bg-amber-50 dark:peer-checked:bg-amber-950/25 peer-checked:border-amber-500 dark:peer-checked:border-amber-500/70 peer-checked:text-amber-600 dark:peer-checked:text-amber-400 shadow-sm">' +
                         '<span>' + port + '</span>' +
                         '<svg class="w-4 h-4 hidden peer-checked:block text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>' +
@@ -2410,10 +2411,12 @@ const HTML_TEMPLATES = {
             }).join('');
         }
 
-        // Initialize 443 active state immediately
+        // Initialize 443 and 80 active state immediately
         setTimeout(function() {
             const cb443 = document.querySelector('input[name="ports"][value="443"]');
             if (cb443) cb443.checked = true;
+            const cb80 = document.querySelector('input[name="ports"][value="80"]');
+            if (cb80) cb80.checked = true;
         }, 100);
 
         function toggleSettingsModal(show) {
@@ -2451,9 +2454,16 @@ const HTML_TEMPLATES = {
                 document.getElementById('submit-btn').innerText = 'ایجاد کاربر';
                 document.getElementById('input-name').disabled = false;
                 document.getElementById('create-user-form').reset();
-                // Ensure port 443 remains checked as default when form is reset
+                
+                // بازگردانی پورت‌های 443 و 80 به حالت پیش‌فرض
                 const cb443 = document.querySelector('input[name="ports"][value="443"]');
                 if (cb443) cb443.checked = true;
+                const cb80 = document.querySelector('input[name="ports"][value="80"]');
+                if (cb80) cb80.checked = true;
+                
+                // بازگردانی اثر انگشت به iOS
+                const fpSelect = document.getElementById('fingerprint-select');
+                if (fpSelect) fpSelect.value = 'ios';
             }
         }
 
@@ -2464,6 +2474,16 @@ const HTML_TEMPLATES = {
             document.getElementById('submit-btn').innerText = 'ایجاد کاربر';
             document.getElementById('input-name').disabled = false;
             document.getElementById('create-user-form').reset();
+            
+            // اطمینان از اعمال پیش‌فرض‌ها در زمان باز شدن فرم جدید
+            const cb443 = document.querySelector('input[name="ports"][value="443"]');
+            if (cb443) cb443.checked = true;
+            const cb80 = document.querySelector('input[name="ports"][value="80"]');
+            if (cb80) cb80.checked = true;
+            
+            const fpSelect = document.getElementById('fingerprint-select');
+            if (fpSelect) fpSelect.value = 'ios';
+            
             toggleModal(true);
         }
 
@@ -3298,7 +3318,7 @@ const HTML_TEMPLATES = {
                 window.location.reload();
             }
         }
-const CURRENT_VERSION = '1.2.7';
+const CURRENT_VERSION = '1.2.8';
 
 		async function checkForUpdates(isManual = false) {
             try {
