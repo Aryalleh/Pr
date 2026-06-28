@@ -119,7 +119,164 @@ export default {
                 });
             }
         }
+if (request.method === 'POST' && url.pathname === '/api/list-panels') {
+    try {
+        const { token } = await request.json();
+        if (!token) throw new Error("Token cannot be empty");
 
+        const headers = {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+        };
+
+        const accRes = await fetch("https://api.cloudflare.com/client/v4/accounts", { headers });
+        const accData = await accRes.json();
+        
+        if (!accData.success || accData.result.length === 0) {
+            throw new Error("Account not found");
+        }
+        
+        const accountId = accData.result[0].id;
+
+        const scriptsRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts`, { headers });
+        const scriptsData = await scriptsRes.json();
+
+        if (!scriptsData.success) {
+            throw new Error("Failed to fetch scripts");
+        }
+
+        let panels = [];
+        // اینجا فقط اسم پنل ها رو میگیریم تا محدودیت کلودفلر رد بشه
+        for (let script of scriptsData.result) {
+            if (script.id.startsWith('zeus-panel') || script.id.startsWith('ez-')) {
+                panels.push({ name: script.id });
+            }
+        }
+
+        let latestVersion = "Unknown";
+        try {
+            const ghRes = await fetch("https://raw.githubusercontent.com/IR-NETLIFY/zeus/main/zeus.js?t=" + Date.now());
+            if (ghRes.ok) {
+                const ghText = await ghRes.text();
+                const match = ghText.match(/CURRENT_VERSION\s*=\s*['"]([0-9\.]+)['"]/i);
+                if (match && match[1]) latestVersion = "v" + match[1];
+            }
+        } catch(e) {}
+
+        return new Response(JSON.stringify({ success: true, panels, latestVersion }), {
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+    } catch (error) {
+        return new Response(JSON.stringify({ success: false, error: error.message }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// این مسیر جدید، نسخه هر پنل رو به صورت جداگانه چک میکنه
+if (request.method === 'POST' && url.pathname === '/api/get-panel-version') {
+    try {
+        const { token, scriptName } = await request.json();
+        const headers = { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" };
+        
+        const accRes = await fetch("https://api.cloudflare.com/client/v4/accounts", { headers });
+        const accData = await accRes.json();
+        const accountId = accData.result[0].id;
+
+        const contentRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}`, { headers });
+        const contentText = await contentRes.text();
+        
+        let version = "Unknown";
+        const varMatch = contentText.match(/CURRENT_VERSION\s*=\s*['"]([0-9\.]+)['"]/i);
+        
+        if (varMatch && varMatch[1]) {
+            version = "v" + varMatch[1];
+        } else {
+            const spanMatch = contentText.match(/id=["']panel-version["'][^>]*>\s*v?([0-9\.]+)\s*<\/span>/i);
+            if (spanMatch && spanMatch[1]) {
+                version = "v" + spanMatch[1];
+            }
+        }
+        return new Response(JSON.stringify({ success: true, version }), { headers: { 'Content-Type': 'application/json' } });
+    } catch (e) {
+        return new Response(JSON.stringify({ success: false, version: "Unknown" }), { headers: { 'Content-Type': 'application/json' } });
+    }
+}
+
+        if (request.method === 'POST' && url.pathname === '/api/do-update') {
+            try {
+                const { token, scriptName } = await request.json();
+                if (!token || !scriptName) throw new Error("Token or script name missing");
+
+                const headers = {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                };
+
+                const accRes = await fetch("https://api.cloudflare.com/client/v4/accounts", { headers });
+                const accData = await accRes.json();
+                
+                if (!accData.success || accData.result.length === 0) {
+                    throw new Error("Account not found");
+                }
+                
+                const accountId = accData.result[0].id;
+
+                const githubRes = await fetch("https://raw.githubusercontent.com/IR-NETLIFY/zeus/refs/heads/main/zeus.js?t=" + Date.now());
+                if (!githubRes.ok) throw new Error("Failed to fetch source from GitHub");
+                const newCode = await githubRes.text();
+
+                const bindingsRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}/bindings`, { headers });
+                const bindingsData = await bindingsRes.json();
+                
+                if (!bindingsData.success) throw new Error("Failed to fetch bindings");
+
+                const newBindings = [];
+                for (const b of bindingsData.result) {
+                    if (b.type === 'd1') {
+                        newBindings.push({ type: 'd1', name: b.name, id: b.database_id || b.id });
+                    } else if (b.name === 'CF_API_TOKEN') {
+                        newBindings.push({ type: 'secret_text', name: 'CF_API_TOKEN', text: token });
+                    } else if (b.name === 'CF_ACCOUNT_ID') {
+                        newBindings.push({ type: 'secret_text', name: 'CF_ACCOUNT_ID', text: accountId });
+                    }
+                }
+
+                const metadata = {
+                    main_module: "zeus.js",
+                    compatibility_date: "2024-02-08",
+                    bindings: newBindings
+                };
+
+                const formData = new FormData();
+                formData.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+                formData.append("zeus.js", new Blob([newCode], { type: "application/javascript+module" }), "zeus.js");
+
+                const deployRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}`, {
+                    method: 'PUT',
+                    headers: { "Authorization": `Bearer ${token}` },
+                    body: formData
+                });
+                
+                const deployData = await deployRes.json();
+                if (!deployData.success) {
+                    const cfError = deployData.errors && deployData.errors.length > 0 ? deployData.errors[0].message : "Unknown error";
+                    throw new Error(cfError);
+                }
+
+                return new Response(JSON.stringify({ success: true }), {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+            } catch (error) {
+                return new Response(JSON.stringify({ success: false, error: error.message }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        }
         return new Response("Not Found", { status: 404 });
     }
 };
@@ -148,6 +305,15 @@ function getHtmlContent() {
     <style>
         body { font-family: 'Vazirmatn', sans-serif; }
         .token-input::-ms-reveal, .token-input::-ms-clear { display: none; }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #3f3f46; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+        * { scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
+        .dark * { scrollbar-color: #3f3f46 transparent; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-amoled-bg dark:text-zinc-100 min-h-screen flex flex-col items-center justify-center p-4">
@@ -169,7 +335,13 @@ function getHtmlContent() {
             <a href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22workers_kv_storage%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_subdomain%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%5D&accountId=*&zoneId=all&name=Zeus-Deployer-Token" target="_blank" class="flex items-center justify-center w-full py-3.5 bg-[#d94800] hover:bg-[#e35802] text-white font-bold rounded-xl text-sm transition duration-300 shadow-lg shadow-orange-500/20 border border-[#ff943d]">
                 دریافت توکن کلودفلر
             </a>
-
+<div class="mt-2 text-center mb-4">
+    <p class="text-[11px] text-gray-500 dark:text-zinc-400 font-medium">
+        پس از ورود به کلودفلر، به انتهای صفحه بروید و روی دکمه آبی رنگ 
+        <span class="font-bold text-blue-500">Continue to summary</span> 
+        کلیک کنید.
+    </p>
+</div>
             <div class="relative">
                 <input type="password" id="apiToken" placeholder="توکن خود را وارد کنید..." autocomplete="off" spellcheck="false" class="w-full pl-12 pr-4 py-3.5 bg-gray-50 dark:bg-amoled-input border border-gray-300 dark:border-amoled-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono text-left text-gray-900 dark:text-zinc-100 transition token-input" dir="ltr">
                 <button type="button" onclick="toggleToken()" class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300 transition">
@@ -180,7 +352,9 @@ function getHtmlContent() {
             <button id="deployBtn" onclick="startDeploy()" class="w-full py-3.5 bg-[#00792d] hover:bg-[#006024] text-white font-black rounded-xl text-lg transition duration-300 shadow-lg shadow-green-900/40 border border-[#009638]">
                 ساخت پنل
             </button>
-
+            <button type="button" id="openUpdateModalBtn" onclick="toggleUpdateModal(true)" class="w-full py-3.5 bg-[#0052cc] hover:bg-[#0043a6] text-white font-black rounded-xl text-lg transition duration-300 shadow-lg shadow-blue-900/40 border border-[#0060f0] mt-3">
+                آپدیت پنل زئوس
+            </button>
             <div id="status-container" class="hidden mt-4 bg-gray-50 dark:bg-zinc-900/50 rounded-xl p-4 border border-gray-200 dark:border-zinc-800/80">
                 <div class="flex justify-between items-center mb-2.5">
                     <span id="status-text" class="text-xs font-bold text-gray-600 dark:text-zinc-300">شروع فرآیند...</span>
@@ -221,7 +395,157 @@ function getHtmlContent() {
                 eyeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>';
             }
         }
+		function toggleUpdateModal(show) {
+            const modal = document.getElementById('update-modal');
+            const card = document.getElementById('update-modal-card');
+            if (show) {
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                modal.classList.add('opacity-100', 'pointer-events-auto');
+                card.classList.remove('opacity-0', 'scale-95');
+                card.classList.add('opacity-100', 'scale-100');
+            } else {
+                modal.classList.remove('opacity-100', 'pointer-events-auto');
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                card.classList.remove('opacity-100', 'scale-100');
+                card.classList.add('opacity-0', 'scale-95');
+            }
+        }
+
+async function checkExistingPanels() {
+    const token = document.getElementById('updateApiToken').value.trim();
+    const btn = document.getElementById('checkPanelsBtn');
+    const listContainer = document.getElementById('panels-list-container');
+    const statusBox = document.getElementById('update-status');
+
+    if (!token) {
+        statusBox.classList.remove('hidden');
+        statusBox.className = 'mt-4 text-center text-sm font-bold p-3 rounded-xl bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400';
+        statusBox.innerText = 'لطفاً ابتدا توکن را وارد کنید.';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = 'در حال بررسی...';
+    statusBox.classList.add('hidden');
+    listContainer.classList.add('hidden');
+    listContainer.innerHTML = '';
+
+    try {
+        const response = await fetch('/api/list-panels', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token })
+        });
         
+        const result = await response.json();
+        
+        if (result.success) {
+            const latestVersion = result.latestVersion || "Unknown";
+            
+            if (result.panels.length === 0) {
+                statusBox.classList.remove('hidden');
+                statusBox.className = 'mt-4 text-center text-sm font-bold p-3 rounded-xl bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400';
+                statusBox.innerText = 'هیچ پنل زئوسی در این اکانت یافت نشد.';
+            } else {
+                result.panels.forEach(panel => {
+                    const panelDiv = document.createElement('div');
+                    panelDiv.className = 'flex items-center justify-between p-3 bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 rounded-xl';
+                    panelDiv.id = 'panel-item-' + panel.name;
+                    
+                    panelDiv.innerHTML = '<div class="flex flex-col">' +
+                        '<span class="font-bold text-gray-900 dark:text-zinc-100">' + panel.name + '</span>' +
+                        '<span id="version-text-' + panel.name + '" class="text-[11px] text-blue-500 font-medium mt-1 animate-pulse" dir="rtl">در حال بررسی نسخه...</span>' +
+                    '</div>' + 
+                    '<div id="btn-container-' + panel.name + '">' +
+                        '<div class="w-16 h-6 bg-gray-200 dark:bg-zinc-700 rounded-lg animate-pulse"></div>' +
+                    '</div>';
+                    
+                    listContainer.appendChild(panelDiv);
+                    
+                    fetchPanelVersion(token, panel.name, latestVersion);
+                });
+                listContainer.classList.remove('hidden');
+            }
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (e) {
+        statusBox.classList.remove('hidden');
+        statusBox.className = 'mt-4 text-center text-sm font-bold p-3 rounded-xl bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400';
+        statusBox.innerText = e.message;
+    } finally {
+        btn.disabled = false;
+        btn.innerText = 'بررسی پنل‌های موجود';
+    }
+}
+
+async function fetchPanelVersion(token, scriptName, latestVersion) {
+    try {
+        const response = await fetch('/api/get-panel-version', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, scriptName })
+        });
+        
+        const result = await response.json();
+        const version = result.success ? result.version : "Unknown";
+        
+        const isLatest = (version === latestVersion && latestVersion !== "Unknown");
+        const displayVersion = version === "Unknown" ? "نسخه قدیمی / نامشخص" : version;
+        
+        const versionText = document.getElementById('version-text-' + scriptName);
+        const btnContainer = document.getElementById('btn-container-' + scriptName);
+        
+        if (versionText && btnContainer) {
+            versionText.className = 'text-[11px] text-gray-500 dark:text-zinc-400 font-medium mt-1';
+            versionText.innerText = displayVersion;
+            
+            if (isLatest) {
+                btnContainer.innerHTML = '<button disabled class="px-3 py-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 font-bold rounded-lg text-xs cursor-not-allowed">به‌روز است</button>';
+            } else {
+                btnContainer.innerHTML = '<button data-name="' + scriptName + '" onclick="updateZeusPanel(this.dataset.name)" class="px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 dark:text-indigo-400 font-bold rounded-lg text-xs transition">آپدیت</button>';
+            }
+        }
+    } catch (e) {
+        const versionText = document.getElementById('version-text-' + scriptName);
+        if (versionText) {
+            versionText.className = 'text-[11px] text-red-500 font-medium mt-1';
+            versionText.innerText = 'خطا در دریافت نسخه';
+        }
+    }
+}
+
+        async function updateZeusPanel(scriptName) {
+            const token = document.getElementById('updateApiToken').value.trim();
+            const statusBox = document.getElementById('update-status');
+            
+            if (!confirm('آیا از آپدیت پنل ' + scriptName + ' مطمئن هستید؟')) return;
+
+            statusBox.classList.remove('hidden');
+            statusBox.className = 'mt-4 text-center text-sm font-bold p-3 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400';
+            statusBox.innerText = 'در حال آپدیت ' + scriptName + '...';
+
+            try {
+                const response = await fetch('/api/do-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, scriptName })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusBox.className = 'mt-4 text-center text-sm font-bold p-3 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400';
+                    statusBox.innerText = '✅ پنل ' + scriptName + ' با موفقیت آپدیت شد!';
+                    setTimeout(() => checkExistingPanels(), 2000);
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (e) {
+                statusBox.className = 'mt-4 text-center text-sm font-bold p-3 rounded-xl bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400';
+                statusBox.innerText = 'خطا: ' + e.message;
+            }
+        }
         async function startDeploy() {
             const token = document.getElementById('apiToken').value.trim();
             const btn = document.getElementById('deployBtn');
@@ -349,6 +673,40 @@ function getHtmlContent() {
             }
         }
     </script>
+	
+<div id="update-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 opacity-0 pointer-events-none transition-opacity duration-200 ease-out">
+    <div id="update-modal-card" class="w-full max-w-md bg-white dark:bg-amoled-card border border-gray-200 dark:border-amoled-border rounded-3xl shadow-2xl p-6 transform transition-all scale-95 opacity-0 duration-200 flex flex-col max-h-[85vh]">
+        <div class="flex justify-between items-center mb-6 shrink-0">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">آپدیت پنل‌های زئوس</h3>
+            <button onclick="toggleUpdateModal(false)" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        
+        <div class="space-y-4 shrink-0">
+            <a href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22workers_kv_storage%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_subdomain%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%5D&accountId=*&zoneId=all&name=Zeus-Deployer-Token" target="_blank" class="flex items-center justify-center w-full py-2.5 bg-[#d94800] hover:bg-[#e35802] text-white font-bold rounded-xl text-sm transition duration-300">
+                دریافت توکن کلودفلر
+            </a>
+<div class="mt-2 text-center mb-4">
+    <p class="text-[11px] text-gray-500 dark:text-zinc-400 font-medium">
+        پس از ورود به کلودفلر، به انتهای صفحه بروید و روی دکمه آبی رنگ 
+        <span class="font-bold text-blue-500">Continue to summary</span> 
+        کلیک کنید.
+    </p>
+</div>           
+            <input type="password" id="updateApiToken" placeholder="توکن خود را وارد کنید..." autocomplete="off" spellcheck="false" class="w-full px-4 py-3 bg-gray-50 dark:bg-amoled-input border border-gray-300 dark:border-amoled-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono text-left text-gray-900 dark:text-zinc-100 transition" dir="ltr">
+            
+            <button id="checkPanelsBtn" onclick="checkExistingPanels()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-md transition duration-300">
+                بررسی پنل‌های موجود
+            </button>
+        </div>
+
+        <div id="panels-list-container" class="mt-6 hidden overflow-y-auto space-y-3 pr-1 pb-2">
+        </div>
+
+        <div id="update-status" class="hidden mt-4 text-center text-sm font-bold shrink-0 p-3 rounded-xl"></div>
+    </div>
+</div>
 </body>
 </html>
     `;
