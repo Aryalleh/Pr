@@ -296,7 +296,14 @@ const Router = {
 				if (!githubRes.ok) throw new Error("خطا در دریافت سورس جدید از گیت‌هاب");
 				const newCode = await githubRes.text();
 
-				const scriptName = env.WORKER_NAME || url.hostname.split(".")[0];
+				let scriptName = env.WORKER_NAME;
+				if (!scriptName) {
+    				if (url.hostname.endsWith(".workers.dev")) {
+    				    scriptName = url.hostname.split(".")[0];
+    				} else {
+    				    throw new Error("WORKER_NAME_REQUIRED");
+    				}
+				}
 				const bindingsRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${currentAccountId}/workers/scripts/${scriptName}/bindings`, {
 					headers: { Authorization: "Bearer " + currentToken },
 				});
@@ -306,7 +313,7 @@ const Router = {
 				const newBindings = [];
 				for (const b of bindingsData.result) {
 					if (b.type === "d1") {
-						newBindings.push({ type: "d1", name: b.name, id: b.database_id || b.id });
+						newBindings.push({ type: "d1", name: b.name, database_id: b.database_id || b.id });
 					} else if (b.name === "CF_API_TOKEN") {
 						newBindings.push({ type: "secret_text", name: "CF_API_TOKEN", text: currentToken });
 					} else if (b.name === "CF_ACCOUNT_ID") {
@@ -364,7 +371,14 @@ const Router = {
 				if (!githubRes.ok) throw new Error("خطا در دریافت سورس از گیت‌هاب");
 				const newCode = await githubRes.text();
 
-				const scriptName = env.WORKER_NAME || url.hostname.split(".")[0];
+				let scriptName = env.WORKER_NAME;
+				if (!scriptName) {
+    				if (url.hostname.endsWith(".workers.dev")) {
+    				    scriptName = url.hostname.split(".")[0];
+    				} else {
+    				    throw new Error("WORKER_NAME_REQUIRED");
+    				}
+				}
 				const bindingsRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${currentAccountId}/workers/scripts/${scriptName}/bindings`, {
 					headers: { Authorization: "Bearer " + currentToken },
 				});
@@ -374,7 +388,7 @@ const Router = {
 				const newBindings = [];
 				for (const b of bindingsData.result) {
 					if (b.type === "d1") {
-						newBindings.push({ type: "d1", name: b.name, id: b.database_id || b.id });
+						newBindings.push({ type: "d1", name: b.name, database_id: b.database_id || b.id });
 					}
 				}
 
@@ -2746,9 +2760,9 @@ const HTML_TEMPLATES = {
                 نسخه جدید در دسترس است. اگر آپدیت خودکار جواب نداد، حتماً از طریق لینک زیر آپدیت دستی را انجام دهید.
             </p>
             <div class="space-y-3">
-                <button onclick="applyUpdate()" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-sm transition duration-300 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
+                <button type="button" id="auto-update-btn" onclick="applyUpdate()" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-sm transition duration-300 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 cursor-pointer">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                    آپدیت خودکار (توصیه شده)
+                    <span id="auto-update-text">آپدیت خودکار (توصیه شده)</span>
                 </button>
                 <div class="relative py-2">
                     <div class="absolute inset-0 flex items-center">
@@ -4304,41 +4318,44 @@ function editUser(encodedUsername) {
                 window.location.reload();
             }
         }
-const CURRENT_VERSION = '1.5.7';
+const CURRENT_VERSION = '1.5.8';
 const UPDATE_FIX = "constsCURRENT_VERSION='d.d.d'";
-		async function checkForUpdates(isManual = false) {
-            try {
-                if (isManual) {
-                    document.getElementById('update-toggle').classList.add('animate-pulse');
-                }
-                const res = await fetch('https://raw.githubusercontent.com/IR-NETLIFY/zeus/refs/heads/main/zeus.js?t=' + Date.now());
-                if (!res.ok) throw new Error('Network response was not ok');
-                const text = await res.text();
-                const match = text.match(/const\\s+CURRENT_VERSION\\s*=\\s*['"](\\d+\\.\\d+\\.\\d+)['"]/i);
-                const latestVersion = match ? match[1] : null;
-                if (isManual) {
-                    document.getElementById('update-toggle').classList.remove('animate-pulse');
-                }
-                if (latestVersion && latestVersion !== CURRENT_VERSION) {
-                    document.getElementById('update-toggle').className = "p-2 rounded-lg bg-red-100 dark:bg-red-900/60 border border-red-500 hover:bg-red-200 dark:hover:bg-red-900/80 transition text-red-700 dark:text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.6)] animate-pulse relative";
-                    const badge = document.getElementById('update-badge');
-                    if (badge) badge.remove();
-                    if (isManual) {
-                        // باز کردن پنجره اختصاصی آپدیت به جای alert معمولی
-                        toggleUpdateModal(true, latestVersion);
-                    }
-                } else {
-                    if (isManual) {
-                        alert('شما در حال استفاده از آخرین نسخه (v' + CURRENT_VERSION + ') هستید.');
-                    }
-                }
-            } catch (err) {
-                if (isManual) {
-                    document.getElementById('update-toggle').classList.remove('animate-pulse');
-                    alert('خطا در بررسی آپدیت از گیت هاب.');
-                }
+async function checkForUpdates(isManual = false) {
+    try {
+        if (isManual) {
+            document.getElementById('update-toggle').classList.add('animate-pulse');
+            alert('⏳ در حال اتصال به گیت‌هاب... (ممکن است به دلیل اینترنت ایران طول بکشد)');
+        }
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const res = await fetch('https://raw.githubusercontent.com/IR-NETLIFY/zeus/refs/heads/main/zeus.js?t=' + Date.now(), { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (!res.ok) throw new Error('Network response was not ok');
+        const text = await res.text();
+        const match = text.match(/const\\s+CURRENT_VERSION\\s*=\\s*['"](\\d+\\.\\d+\\.\\d+)['"]/i);
+        const latestVersion = match ? match[1] : null;
+        if (isManual) {
+            document.getElementById('update-toggle').classList.remove('animate-pulse');
+        }
+        if (latestVersion && latestVersion !== CURRENT_VERSION) {
+            document.getElementById('update-toggle').className = "p-2 rounded-lg bg-red-100 dark:bg-red-900/60 border border-red-500 hover:bg-red-200 dark:hover:bg-red-900/80 transition text-red-700 dark:text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.6)] animate-pulse relative";
+            const badge = document.getElementById('update-badge');
+            if (badge) badge.remove();
+            if (isManual) {
+                toggleUpdateModal(true, latestVersion);
+            }
+        } else {
+            if (isManual) {
+                alert('✅ شما در حال استفاده از آخرین نسخه هستید.');
             }
         }
+    } catch (err) {
+        if (isManual) {
+            document.getElementById('update-toggle').classList.remove('animate-pulse');
+            alert('❌ خطا در بررسی آپدیت از گیت‌هاب (احتمالاً مشکل فیلترینگ).');
+        }
+    }
+}
         function toggleTokenModal(show) {
             const modal = document.getElementById('token-modal');
             const card = document.getElementById('token-modal-card');
@@ -4366,38 +4383,75 @@ const UPDATE_FIX = "constsCURRENT_VERSION='d.d.d'";
             applyUpdate(token);
         }
 
-        async function applyUpdate(token = null) {
-            if (!token) toggleUpdateModal(false);
-            const btn = document.getElementById('update-toggle');
-            btn.disabled = true;
-            if (!token) alert('در حال دریافت و اعمال آپدیت... لطفاً چند ثانیه صبر کنید.');
-            try {
-                const reqBody = token ? JSON.stringify({ cf_token: token }) : "{}";
-                const res = await fetch('/api/update-panel', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: reqBody
-                });
-                const data = await res.json();
-                if (res.status === 400 && data.error === "TOKEN_REQUIRED") {
-                    toggleTokenModal(true);
-                    btn.disabled = false;
-                    return;
+window.applyUpdate = async function(token = null) {
+    try {
+        if (typeof token !== 'string') token = null;
+
+        const updateModal = document.getElementById('update-modal');
+        let autoBtn = null;
+        
+        if (updateModal) {
+            const buttons = updateModal.querySelectorAll('button');
+            for (let i = 0; i < buttons.length; i++) {
+                if (buttons[i].getAttribute('onclick') === 'applyUpdate()') {
+                    autoBtn = buttons[i];
+                    break;
                 }
-                if (res.ok && data.success) {
-                    alert('پنل با موفقیت آپدیت شد و دسترسی‌های کلودفلر تنظیم شدند! در حال راه‌اندازی مجدد (2 ثانیه صبر کنید)...');
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
-                } else {
-                    alert('خطا در بروزرسانی. لطفاً با استفاده از دکمه "آپدیت دستی" اقدام کنید.');
-                    btn.disabled = false;
-                }
-            } catch (err) {
-                alert('خطا در ارتباط با سرور. لطفاً از گزینه آپدیت دستی استفاده کنید.');
-                btn.disabled = false;
             }
         }
+        
+        if (autoBtn && !token) {
+            autoBtn.disabled = true;
+            autoBtn.style.opacity = '0.7';
+            autoBtn.style.cursor = 'wait';
+            autoBtn.innerText = 'در حال آپدیت... (صبر کنید)';
+        }
+
+        const btn = document.getElementById('update-toggle');
+        if (btn) btn.disabled = true;
+
+        if (!token) {
+            alert('در حال اعمال آپدیت... لطفاً پنجره را نبندید.');
+        }
+
+        const reqBody = token ? JSON.stringify({ cf_token: token }) : "{}";
+        const res = await fetch('/api/update-panel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: reqBody
+        });
+        const data = await res.json();
+
+        if (res.status === 400 && data.error === "TOKEN_REQUIRED") {
+            toggleUpdateModal(false);
+            toggleTokenModal(true);
+            
+            if (btn) btn.disabled = false;
+            if (autoBtn && !token) {
+                autoBtn.disabled = false;
+                autoBtn.style.opacity = '1';
+                autoBtn.style.cursor = 'pointer';
+                autoBtn.innerText = 'آپدیت خودکار (توصیه شده)';
+            }
+            return;
+        }
+
+        if (res.ok && data.success) {
+            if (autoBtn) autoBtn.innerText = 'آپدیت موفق!';
+            alert('پنل با موفقیت آپدیت شد! در حال راه‌اندازی مجدد...');
+            setTimeout(() => window.location.reload(), 2000);
+        } else {
+            alert('خطا در بروزرسانی: ' + (data.error || 'ارور سرور'));
+            if (btn) btn.disabled = false;
+            toggleUpdateModal(false);
+        }
+    } catch (err) {
+        alert('خطا در ارتباط با سرور. لطفاً موقتاً از طریق دکمه آپدیت دستی اقدام کنید.');
+        const btn = document.getElementById('update-toggle');
+        if (btn) btn.disabled = false;
+        toggleUpdateModal(false);
+    }
+};
 let cachedIpsData = {};
 async function fetchIpsList() {
     try {
