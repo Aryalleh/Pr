@@ -2292,7 +2292,7 @@ login: `<!DOCTYPE html>
                                transition-all duration-200 
                                text-emerald-600 dark:text-emerald-400 
                                relative shadow-sm" 
-                        title="Update">
+                        title="آپدیت">
                     
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 11l3-3m0 0l3 3m-3-3v8m0-13a9 9 0 110 18 9 9 0 010-18z"></path>
@@ -2323,8 +2323,8 @@ login: `<!DOCTYPE html>
                            transition-all duration-200 
                            text-red-600 dark:text-red-400 
                            shadow-sm hover:shadow-md"
-                    title="Logout">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    title="خروج">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                     </svg>
                 </button>
@@ -2603,7 +2603,12 @@ login: `<!DOCTYPE html>
 					<div>
     					<div class="flex items-center justify-between mb-2">
         					<label class="block text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider">آیپی تمیز کلودفلر (اختیاری)</label>
-        					<button type="button" onclick="openIpSelectorModal()" class="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg text-xs font-bold transition border border-indigo-200 dark:border-indigo-800">مخزن آیپی تمیز</button>
+        					<button 
+								type="button" 
+  								onclick="openIpSelectorModal()" 
+  								class="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/70 border border-amber-400 dark:border-amber-600 rounded-lg text-xs font-bold transition-all">
+  								مخزن آیپی تمیز
+							</button>
     					</div>
     					<textarea id="input-ips" rows="2" placeholder="104.16.0.1" class="w-full px-3 py-2.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-xs font-mono text-gray-800 dark:text-zinc-100 placeholder-gray-400/80 transition resize-none"></textarea>
 					</div>
@@ -2656,7 +2661,7 @@ login: `<!DOCTYPE html>
                 </div>
                 <div>
                     <label class="block text-xs font-medium mb-1.5 text-gray-700 dark:text-zinc-300">تعداد</label>
-                    <input type="number" id="ip-count-input" min="1" value="10" dir="ltr" class="w-full px-3 py-2.5 bg-gray-50 dark:bg-amoled-input border border-gray-300 dark:border-amoled-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs font-mono text-center">
+                    <input type="number" id="ip-count-input" min="1" value="20" dir="ltr" class="w-full px-3 py-2.5 bg-gray-50 dark:bg-amoled-input border border-gray-300 dark:border-amoled-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs font-mono text-center">
                 </div>
             </div>
             <div class="pt-4 flex gap-3">
@@ -3382,7 +3387,7 @@ login: `<!DOCTYPE html>
             }
         });
 		async function restartCore() {
-			if (!await customConfirm('آیا از ری‌استارت هسته ورکر مطمئن هستید؟ این کار تمام اتصالات فعلی را قطع می‌کند.')) return;
+			if (!await customConfirm('آیا از ری استارت هسته مطمئن هستید؟ تمام اتصالات یک لحظه قطع خواهند شد.')) return;
             
             const btn = document.querySelector('button[title="ری‌استارت هسته ورکر"]');
             if (btn) {
@@ -4293,14 +4298,14 @@ function editUser(encodedUsername) {
             }
         }
         async function logoutAdmin() {
-			if (await customConfirm('⚠️ آیا می‌خواهید از پنل خارج شوید؟')) {
+			if (await customConfirm('آیا می‌خواهید از پنل خارج شوید؟ ⚠️ ')) {
                 try {
                     await fetch('/api/logout', { method: 'POST' });
                 } catch (err) {}
                 window.location.reload();
             }
         }
-const CURRENT_VERSION = '1.5.9';
+const CURRENT_VERSION = '1.5.10';
 const UPDATE_FIX = "constsCURRENT_VERSION='d.d.d'";
 		async function checkForUpdates(isManual = false) {
             try {
