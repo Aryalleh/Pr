@@ -1,5 +1,5 @@
-name = "zeus-panel"
-main = "zeus.js"
+name = "crabvpn"
+main = "crabvpn.js"
 compatibility_date = "2024-09-01"
 
 [[d1_databases]]

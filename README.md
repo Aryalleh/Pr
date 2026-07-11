@@ -1,103 +1,89 @@
-
-<img src="https://raw.githubusercontent.com/IR-NETLIFY/zeus/refs/heads/main/photos/dark.png" width="100%" alt="Zeus Panel Dark Mode" style="border-radius: 12px; margin-bottom: 15px;">
-
-<table width="100%">
-  <tr>
-    <td width="50%" valign="middle" align="center">
-      <img src="https://raw.githubusercontent.com/IR-NETLIFY/zeus/refs/heads/main/photos/updater.png" width="100%" alt="Zeus Panel Status" style="border-radius: 12px;">
-    </td>
-    <td width="50%" valign="middle" align="center">
-      <img src="https://raw.githubusercontent.com/IR-NETLIFY/zeus/refs/heads/main/photos/deployer.png" width="100%" alt="Zeus Panel Interface" style="border-radius: 12px;">
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="middle" align="center">
-      <img src="https://raw.githubusercontent.com/IR-NETLIFY/zeus/refs/heads/main/photos/add.png" width="100%" alt="Zeus Panel Status" style="border-radius: 12px;">
-    </td>
-    <td width="50%" valign="middle" align="center">
-      <img src="https://raw.githubusercontent.com/IR-NETLIFY/zeus/refs/heads/main/photos/status.png" width="100%" alt="Zeus Panel Dark Mode" style="border-radius: 12px;">
-    </td>
-  </tr>
-</table>
-
 <div align="center">
-  <h1>⚡ پنل زئوس کلودفلر (Zeus Panel)</h1>
-  
+  <h1>🦀 CrabVPN</h1>
+  <p>یک ورکر یکپارچه‌ی Cloudflare که هم خودش رله VLESS/Xray را انجام می‌دهد، هم پنل مدیریت و پورتال مشتری و درگاه پرداخت و ربات تلگرام را داخل خودش دارد — بدون نیاز به سرور جدا یا افزودن «سرور» دیگری.</p>
   <p>
-    <a href="https://github.com/IR-NETLIFY/zeus">
-      <img src="https://img.shields.io/badge/Version-1.6.8-0052CC?style=for-the-badge&logo=semver&logoColor=white" alt="Version">
-    </a>
-    <a href="https://cloudflare.com">
-      <img src="https://img.shields.io/badge/Platform-Cloudflare_Workers-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Platform">
-    </a>
-    <a href="https://t.me/IR_NETLIFY">
-      <img src="https://img.shields.io/badge/Developer-IR__NETLIFY-00792D?style=for-the-badge&logo=telegram&logoColor=white" alt="Developer">
-    </a>
+    <img src="https://img.shields.io/badge/Platform-Cloudflare_Workers-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Platform">
+    <img src="https://img.shields.io/badge/DB-D1_(SQLite)-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="D1">
+    <img src="https://img.shields.io/badge/Bot-Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram">
   </p>
 </div>
 
 ---
 
-# ⚡ قابلیت های پنل
-- 👥 مدیریت کاربران بر اساس حجم، زمان، ریکوئست و دستگاه‌های همزمان.
-- 🛠️ عملیات گروهی  برای ویرایش، حذف و ریست کاربران.
-- 🛡️ پشتیبانی از Fragment و شبیه‌ساز Fingerprint برای عبور از فیلترینگ.
-- 📱 رابط کاربری مدرن (Tailwind CSS) با پشتیبانی از دارک‌مود و موبایل.
-- 🛑 مسدودساز هوشمند سایت‌های پورنوگرافی و تبلیغات از طریق DNS.
-- 📡 دریافت خودکار آی‌پی تمیز و امکان تنظیم پروکسی سفارشی .
-- 📊 مانیتورینگ زنده ریکوئست‌های کلودفلر برای جلوگیری از مسدودی.
-- 🔗 تولید لینک ساب‌اسکریپشن، QR کد و صفحه وضعیت اختصاصی هر کاربر.
-- 🔄 آپدیت خودکارهسته پنل بدون از دست رفتن اطلاعات دیتابیس.
-- 🗄️ امکان بک‌آپ‌گیری کامل (Export/Import) اطلاعات در قالب JSON.
+## ⚡ قابلیت‌ها
+
+**موتور VPN**
+- رله ترافیک VLESS به‌صورت مستقیم از طریق `cloudflare:sockets` (بدون نیاز به سرور واسط)
+- مسدودسازی هوشمند دامنه‌های پورن/تبلیغات از طریق DNS
+- پشتیبانی از Fragment و شبیه‌ساز Fingerprint برای عبور از فیلترینگ
+- دریافت خودکار آی‌پی تمیز و امکان تنظیم پروکسی سفارشی
+- تولید لینک اشتراک (Subscription)، QR کد و صفحه وضعیت اختصاصی برای هر کاربر
+
+**پنل مدیریت (`/panel`)**
+- مدیریت کاربران بر اساس حجم، زمان، تعداد درخواست و دستگاه‌های همزمان
+- بسته‌های حجمی با قیمت و مدت دلخواه، بدون محدودیت در تعداد یا حجم
+- لیست و تأیید دستی پرداخت‌ها
+- آمار مصرف ماهانه (حجم/تعداد درخواست) و مانیتورینگ زنده‌ی درخواست‌های Cloudflare
+- ارسال پیام همگانی (Broadcast) به همه‌ی کاربرانی که از طریق ربات تلگرام ثبت‌نام کرده‌اند
+- تنظیمات درگاه پرداخت و ربات تلگرام، همگی از داخل پنل و بدون نیاز به تغییر کد
+
+**پورتال مشتری (`/status/<uuid>`)**
+- نمایش مصرف، باقی‌مانده و تاریخ انقضا
+- کانفیگ VLESS + QR کد + لینک اشتراک، همه در یک صفحه
+- خرید بسته اول یا تمدید/افزایش حجم، بدون محدودیت زمانی یا مصرفی برای خرید مجدد
+- حالت خالی (Empty State) برای کاربرانی که هنوز بسته‌ای نخریده‌اند
+
+**پرداخت (AryallehPay)**
+- ساخت سفارش پرداخت با شماره سفارش یکتا (`ord-{تاریخ}-{بسته}-{کاربر}`)
+- تأیید خودکار از طریق Callback درگاه یا تأیید دستی از پنل / دکمه‌ی داخل کانال تلگرام
+- آدرس پایه‌ی درگاه و کلید API، هر دو از تنظیمات پنل قابل تغییر
+
+**ربات تلگرام**
+- کاربر با ارسال `/start` بلافاصله پورتال شخصی خودش را دریافت می‌کند (ساخت خودکار حساب در اولین بار)
+- امکان تنظیم کانال عضویت اجباری برای استفاده از ربات
+- اطلاع‌رسانی ثبت‌نام کاربر جدید و هر پرداخت جدید (همراه با دکمه‌ی تأیید) در یک کانال ادمین خصوصی
+- ارسال پیام همگانی به همه‌ی کاربران ربات از داخل پنل
+
+**امنیت و مخفی‌کاری**
+- مسیر `/` به یک لینک دلخواه (مثلاً کانال تلگرام) ریدایرکت می‌شود
+- تمام مسیرهای ناشناخته‌ی دیگر یک صفحه‌ی دکوی nginx نشان می‌دهند تا اسکنرهای خودکار متوجه ماهیت واقعی ورکر نشوند
 
 ---
 
+## 🚀 نصب
 
-## 🚀 راهنمای نصب و استقرار سریع
+1. یک دیتابیس D1 بسازید:
+   ```bash
+   npx wrangler d1 create crabvpn
+   ```
+2. `wrangler.toml` را باز کنید و `database_id` را با آیدی واقعی دیتابیسی که ساختید جایگزین کنید:
+   ```toml
+   [[d1_databases]]
+   binding = "DB"
+   database_name = "crabvpn"
+   database_id = "آیدی-واقعی-دیتابیس-شما"
+   ```
+3. نصب و دیپلوی:
+   ```bash
+   npm install
+   npm run deploy
+   ```
+4. وارد آدرس ورکر خود شوید و رمز عبور پنل مدیریت را برای اولین بار تنظیم کنید.
+5. از داخل پنل (بخش تنظیمات):
+   - توکن ربات تلگرام و کانال‌های اطلاع‌رسانی/عضویت اجباری را وارد کنید (webhook ربات خودکار تنظیم می‌شود).
+   - کلید API و آدرس پایه‌ی درگاه AryallehPay را وارد کنید.
+   - بسته‌های حجمی مورد نظرتان را بسازید.
 
-<div align="center">
-  <a href="https://zeus-panel.ir-netlify.workers.dev/" target="_blank">
-    <img src="https://img.shields.io/badge/Launch_Zeus_Panel-Click_Here-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Deploy Zeus" height="40">
-  </a>
-  <br>
-  <sub>برای ورود به سایت نصب‌کننده و راه‌اندازی خودکار، روی دکمه بالا کلیک کنید</sub>
-</div>
-
-<br>
-
-1. 🌐 از طریق دکمه فوق وارد **سایت نصب‌کننده (Deployer)** شوید.
-2. 🟧 بر روی دکمه نارنجی‌رنگ <span style="color: #F38020;"><b>دریافت توکن</b></span> کلیک کنید تا به حساب کلودفلر خود هدایت شوید.
-3. 🟦 پس از ورود به کلودفلر، به انتهای صفحه اسکرول کرده و روی دکمه آبی‌رنگ <span style="color: #0052CC;"><b>Continue to summary</b></span> کلیک کنید؛ سپس ساخت توکن را تأیید کرده و کدی که به شما داده می‌شود را کپی کنید.
-4. 🔑 به سایت نصب‌کننده بازگردید و توکن کپی‌شده را در کادر مربوطه قرار دهید.
-5. ⚡ دکمه سبزرنگ **ساخت پنل** را بزنید و منتظر بمانید تا دیتابیس D1 و ورکر شما به‌طور کامل و خودکار مستقر شوند.
-
-> ⚠️ **نکته امنیتی بسیار مهم:** رمز عبور اولیه‌ای که در اولین ورود برای پنل مدیریت خود تنظیم می‌کنید را حتماً در جایی مطمئن یادداشت کنید و آن را فراموش نکنید!
-
----
-
-## 📈 تاریخچه ستاره‌ها (Star History)
-
-<a href="https://www.star-history.com/?repos=IR-NETLIFY%2Fzeus&type=timeline&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=IR-NETLIFY/zeus&type=timeline&theme=dark&legend=bottom-right" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=IR-NETLIFY/zeus&type=timeline&legend=bottom-right" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=IR-NETLIFY/zeus&type=timeline&legend=bottom-right" />
- </picture>
-</a>
+> ⚠️ **نکته امنیتی:** رمز عبور اولیه‌ی پنل مدیریت را در جایی مطمئن نگه دارید؛ در صورت فراموشی، بازیابی فقط از طریق توکن API کلودفلر ممکن است.
 
 ---
 
-## 💰 حمایت مالی (Donate)
+## ⚠️ هشدار
 
-<p align="center"> ساخته‌ شده با ❤️</p>
-<p align="center"><a href="https://donatonion.ir-netlify.workers.dev"><b>https://donatonion.ir-netlify.workers.dev</b></a></p>
-<p align="center"> از حمایت شما برای زنده نگه‌داشتن و توسعه این پروژه منبع‌باز متشکریم 🙏</p>
+این پروژه برای رله‌ی ترافیک VPN از قابلیت `cloudflare:sockets` در Cloudflare Workers استفاده می‌کند. این نوع استفاده می‌تواند با قوانین استفاده‌ی قابل‌قبول (Acceptable Use Policy) کلودفلر در تضاد باشد و در صورت گزارش، منجر به ایمیل هشدار یا تعلیق ورکر شود. مسئولیت این ریسک بر عهده‌ی استفاده‌کننده است.
 
 ---
 
-## ⚖️ حق نشر و اعتبارات
+## ⚖️ اعتبارات
 
-این پنل در ابتدا توسط آراد و مورگان نوشته شده بود که بنا به دلایلی ریپازیتوری اصلی حذف شد. نسخه فعلی توسعه‌یافته و بهینه‌شده‌ی همان منطق است.
-
-* **سازندگان اولیه:** نسخه پایه و ایده اولیه پروژه متعلق به [AG-Morgan](https://github.com/AG-Morgan) و [aradava](https://github.com/aradava) می‌باشد.
-* **توسعه‌دهنده فعلی:** ارتقاء پنل، افزودن قابلیت‌های پیشرفته شبکه، طراحی مجدد رابط کاربری و پیاده‌سازی سیستم دیپلوی خودکار توسط [IR_NETLIFY](https://t.me/IR_NETLIFY) انجام شده است.
+هسته‌ی اولیه‌ی رله VLESS، مسدودسازی DNS و Fragment بر پایه‌ی پروژه‌ی متن‌باز Zeus Panel ([AG-Morgan](https://github.com/AG-Morgan) و [aradava](https://github.com/aradava)) توسعه داده شده است. نسخه‌ی فعلی (CrabVPN) پنل مدیریت، پورتال مشتری، درگاه پرداخت و ربات تلگرام را به‌طور کامل بازنویسی و به‌عنوان یک محصول یکپارچه‌ی جدید ارائه می‌کند.
