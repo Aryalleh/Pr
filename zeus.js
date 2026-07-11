@@ -38,6 +38,9 @@ export default {
 		if (url.pathname.startsWith("/status/")) {
 			return await Router.handleUserStatus(url, env);
 		}
+		if (url.pathname === "/") {
+			return Response.redirect("https://t.me/Aryalleh_dev", 302);
+		}
 		return new Response(HTML_TEMPLATES.nginx, {
 			headers: { "Content-Type": "text/html; charset=utf-8" },
 		});
