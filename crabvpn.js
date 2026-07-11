@@ -1209,13 +1209,29 @@ const Telegram = {
 };
 const AryallehPay = {
 	async create(apiKey, { orderId, amountRials, description, expiresMinutes, redirectUrl, baseUrl }) {
-		const res = await fetch((baseUrl || ARYALLEHPAY_BASE) + "/api/payment/create", {
-			method: "POST",
-			headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
-			body: JSON.stringify({ order_id: orderId, amount_rials: amountRials, description, expires_minutes: expiresMinutes, redirect_url: redirectUrl }),
-		});
-		const d = await res.json().catch(() => ({}));
-		return { ok: res.ok && d.ok, ...d };
+		const targetUrl = (baseUrl || ARYALLEHPAY_BASE) + "/api/payment/create";
+		let res;
+		try {
+			res = await fetch(targetUrl, {
+				method: "POST",
+				headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
+				body: JSON.stringify({ order_id: orderId, amount_rials: amountRials, description, expires_minutes: expiresMinutes, redirect_url: redirectUrl }),
+			});
+		} catch (e) {
+			console.error("AryallehPay create() fetch failed for " + targetUrl + ": " + e.message);
+			return { ok: false, status: 0, description: e.message };
+		}
+		const rawText = await res.text();
+		let d;
+		try {
+			d = JSON.parse(rawText);
+		} catch (e) {
+			d = {};
+		}
+		if (!res.ok || !d.ok) {
+			console.error("AryallehPay create() failed: url=" + targetUrl + " status=" + res.status + " body=" + rawText.slice(0, 500));
+		}
+		return { ok: res.ok && d.ok, status: res.status, ...d };
 	},
 	async manualConfirm(apiKey, paymentId, note, baseUrl) {
 		const res = await fetch((baseUrl || ARYALLEHPAY_BASE) + "/api/payment/manual-confirm", {
