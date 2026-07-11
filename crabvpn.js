@@ -485,7 +485,7 @@ const Router = {
 					await Telegram.call(tgSettings.telegram_bot_token, "answerCallbackQuery", { callback_query_id: cb.id, text: "قبلا تایید شده" });
 					return new Response("ok");
 				}
-				await activateUserPayment(env, payment);
+				await activateUserPayment(env, payment, false);
 				await Telegram.call(tgSettings.telegram_bot_token, "answerCallbackQuery", { callback_query_id: cb.id, text: "✅ تایید شد" });
 				if (cb.message) {
 					const approverName = (cb.from && (cb.from.first_name || cb.from.username)) || "ادمین";
@@ -1244,7 +1244,7 @@ const AryallehPay = {
 		return { ok: res.ok && d.ok, ...d };
 	},
 };
-async function activateUserPayment(env, payment) {
+async function activateUserPayment(env, payment, notifyAdminChannel = true) {
 	if (payment.status === "approved") return;
 	await env.DB.prepare("UPDATE payments SET status = 'approved' WHERE id = ?").bind(payment.id).run();
 	const user = await env.DB.prepare("SELECT * FROM users WHERE username = ?").bind(payment.username).first();
@@ -1255,6 +1255,25 @@ async function activateUserPayment(env, payment) {
 	const newLimitGb = Number(user.limit_gb || 0) + extraGb;
 	const newExpiryDays = Number(user.expiry_days || 0) + Number(pkg.duration_days || 30);
 	await env.DB.prepare("UPDATE users SET limit_gb = ?, expiry_days = ? WHERE username = ?").bind(newLimitGb, newExpiryDays, user.username).run();
+	try {
+		const settingsRows = (await env.DB.prepare("SELECT key, value FROM settings WHERE key IN ('telegram_bot_token','telegram_channel_id')").all()).results || [];
+		const tgSettings = Object.fromEntries(settingsRows.map((r) => [r.key, r.value]));
+		if (tgSettings.telegram_bot_token) {
+			const amountLabel = Number(payment.amount_irr || 0).toLocaleString("fa-IR");
+			if (user.telegram_user_id) {
+				await Telegram.call(tgSettings.telegram_bot_token, "sendMessage", {
+					chat_id: user.telegram_user_id,
+					text: "✅ پرداخت شما تأیید شد!\n📦 بسته: " + pkg.name + "\n💰 مبلغ: " + amountLabel + " تومان\n\nحجم و مدت اشتراکت به‌روزرسانی شد. 🎉",
+				});
+			}
+			if (notifyAdminChannel && tgSettings.telegram_channel_id) {
+				await Telegram.call(tgSettings.telegram_bot_token, "sendMessage", {
+					chat_id: tgSettings.telegram_channel_id,
+					text: "✅ پرداخت تأیید شد\nکاربر: " + (user.name || user.username) + " (" + user.username + ")\nبسته: " + pkg.name + "\nمبلغ: " + amountLabel + " تومان",
+				});
+			}
+		}
+	} catch (e) {}
 }
 function getActiveIpCount(activeIpsJson) {
 	if (!activeIpsJson) return 0;
