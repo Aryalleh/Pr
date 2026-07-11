@@ -1,0 +1,13 @@
+{
+  "name": "crabvpn-master",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build-pages.js",
+    "dev": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
