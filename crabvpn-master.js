@@ -245,6 +245,22 @@ function SshPanelClient(server) {
 				return { connected: false, error: e.message };
 			}
 		},
+		async getConfig(username) {
+			const res = await fetch(base + "/sub/" + encodeURIComponent(username));
+			if (!res.ok) throw new Error("subscription fetch failed: " + res.status);
+			const b64 = (await res.text()).trim();
+			let decoded;
+			try {
+				decoded = atob(b64);
+			} catch (e) {
+				throw new Error("bad subscription encoding");
+			}
+			return decoded
+				.split("\n")
+				.map((l) => l.trim())
+				.filter((l) => l.startsWith("vless://"))
+				.join("\n");
+		},
 	};
 }
 
@@ -349,6 +365,62 @@ function XrayPanelClient(server) {
 			} catch (e) {
 				return { connected: false, error: e.message };
 			}
+		},
+		async getConfig(username) {
+			const cookie = await login();
+			const inbound = await getInbound(cookie);
+			if (!inbound) throw new Error("inbound not found");
+			const clients = parseClients(inbound);
+			const c = clients.find((x) => x.email === username);
+			if (!c) throw new Error("client not found on server");
+			let host = server.ssh_host;
+			if (!host || host === "127.0.0.1") {
+				try {
+					host = new URL(server.xpanel_url).hostname;
+				} catch (e) {
+					host = server.xpanel_url;
+				}
+			}
+			const port = inbound.port;
+			let stream = {};
+			try {
+				stream = JSON.parse(inbound.streamSettings || "{}");
+			} catch (e) {}
+			const network = stream.network || "tcp";
+			const security = stream.security || "none";
+			const params = new URLSearchParams();
+			params.set("type", network);
+			params.set("security", security);
+			params.set("encryption", "none");
+			if (network === "ws") {
+				const ws = stream.wsSettings || {};
+				if (ws.path) params.set("path", ws.path);
+				const wsHost = ws.headers && ws.headers.Host;
+				if (wsHost) params.set("host", wsHost);
+			} else if (network === "grpc") {
+				const grpc = stream.grpcSettings || {};
+				if (grpc.serviceName) params.set("serviceName", grpc.serviceName);
+			}
+			if (security === "tls") {
+				const tls = stream.tlsSettings || {};
+				const sni = (tls.serverName || (tls.serverNames && tls.serverNames[0])) || host;
+				params.set("sni", sni);
+				if (tls.fingerprint) params.set("fp", tls.fingerprint);
+			} else if (security === "reality") {
+				const rl = stream.realitySettings || {};
+				const rlSettings = rl.settings || {};
+				const sni = (rl.serverNames && rl.serverNames[0]) || "";
+				if (sni) params.set("sni", sni);
+				const pbk = rlSettings.publicKey || rl.publicKey;
+				if (pbk) params.set("pbk", pbk);
+				const sid = (rl.shortIds && rl.shortIds[0]) || "";
+				if (sid) params.set("sid", sid);
+				const fp = rlSettings.fingerprint || rl.fingerprint;
+				if (fp) params.set("fp", fp);
+				const spx = rlSettings.spiderX || rl.spiderX;
+				if (spx) params.set("spx", spx);
+			}
+			return `vless://${c.id}@${host}:${port}?${params.toString()}#${encodeURIComponent(username)}`;
 		},
 	};
 }
@@ -710,10 +782,18 @@ const PortalRoutes = {
 			)
 			.bind(customer.id)
 			.all()).results || [];
-		const subscriptions = orders.map((o) => {
+		const subscriptions = [];
+		for (const o of orders) {
 			const total = Number(o.total_mb || 0);
 			const used = Number(o.used_mb || 0);
-			return {
+			let configText = null;
+			if (!configHidden) {
+				try {
+					const server = await db.prepare("SELECT * FROM servers WHERE id = ?").bind(o.server_id).first();
+					if (server) configText = await getPanelClient(server).getConfig(o.xpanel_user);
+				} catch (e) {}
+			}
+			subscriptions.push({
 				order_id: o.id,
 				server_id: o.server_id,
 				server_flag: o.server_flag,
@@ -726,10 +806,10 @@ const PortalRoutes = {
 				used_pct: total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0,
 				expdate: o.expdate,
 				created_at: o.created_at,
-				config_text: configHidden ? null : "vless://" + o.xpanel_uuid + "@" + o.xpanel_user + "?config=pending",
+				config_text: configText,
 				config_netmod: null,
-			};
-		});
+			});
+		}
 		return Utils.json({ ok: true, customer: { name: customer.name, phone: customer.phone }, subscriptions, config_hidden: configHidden });
 	},
 
