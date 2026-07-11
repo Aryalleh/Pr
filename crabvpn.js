@@ -340,12 +340,13 @@ const Router = {
 				const priceToman = Number(pkg.price_irr || 0);
 				const expiresMinutes = 30;
 				const expiresAt = new Date(Date.now() + expiresMinutes * 60000).toISOString();
-				const orderIdStr = "ord-" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + "-" + pkg.id + "-" + (user.telegram_user_id || user.id);
 				const payRes = await env.DB
-					.prepare("INSERT INTO payments (username, package_id, amount_irr, status, pkg_name, expires_at, order_id) VALUES (?,?,?,?,?,?,?)")
-					.bind(user.username, pkg.id, priceToman, "pending", pkg.name, expiresAt, orderIdStr)
+					.prepare("INSERT INTO payments (username, package_id, amount_irr, status, pkg_name, expires_at) VALUES (?,?,?,?,?,?)")
+					.bind(user.username, pkg.id, priceToman, "pending", pkg.name, expiresAt)
 					.run();
 				const paymentId = payRes.meta.last_row_id;
+				const orderIdStr = "ord-" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + "-" + pkg.id + "-" + (user.telegram_user_id || user.id) + "-" + paymentId;
+				await env.DB.prepare("UPDATE payments SET order_id = ? WHERE id = ?").bind(orderIdStr, paymentId).run();
 				const methods = {};
 				if (settings.payment_tetra_enabled === "1" && settings.tetra_api_key) {
 					const amountRials = priceToman * 10 + Math.floor(Math.random() * 900) * 10;
